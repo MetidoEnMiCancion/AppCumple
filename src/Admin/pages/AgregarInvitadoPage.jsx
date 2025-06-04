@@ -1,27 +1,34 @@
-// admin/pages/AgregarInvitadoPage.jsx
 import { useState, useEffect } from "react";
 import { supabase } from "../../services/supabase";
 
-export default function AgregarInvitadoPage() {
+export function AgregarInvitadoPage() {
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
   const [mesaId, setMesaId] = useState("");
-  const [mesas, setMesas] = useState([]);
   const [mensaje, setMensaje] = useState("");
+  const [mesas, setMesas] = useState([]);
+  const [invitados, setInvitados] = useState([]);
+  const [editandoId, setEditandoId] = useState(null);
 
- useEffect(() => {
-  const cargarMesas = async () => {
-    const { data, error } = await supabase.from('Mesas').select('id, "Nombre"');
-    if (error) {
-      console.error('Error cargando mesas:', error.message);
-    } else {
-      setMesas(data);
-      console.log('Mesas cargadas:', data);
-    }
+  useEffect(() => {
+    const cargarDatos = async () => {
+      const { data: mesasData } = await supabase.from('Mesas').select('id, "Nombre"');
+      const { data: invitadosData } = await supabase
+        .from("Invitados")
+        .select("id, Nombre, Apellido, Mesa_id, Mesas (Nombre)");
+      setMesas(mesasData || []);
+      setInvitados(invitadosData || []);
+    };
+
+    cargarDatos();
+  }, []);
+
+  const limpiarFormulario = () => {
+    setNombre("");
+    setApellido("");
+    setMesaId("");
+    setEditandoId(null);
   };
-
-  cargarMesas();
-}, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,26 +38,54 @@ export default function AgregarInvitadoPage() {
       return;
     }
 
-    const { error } = await supabase.from("Invitados").insert({
-      Nombre: nombre,
-      Apellido: apellido,
-      Mesa_id: mesaId,
-    });
+    if (editandoId) {
+      const { error } = await supabase
+        .from("Invitados")
+        .update({ Nombre: nombre, Apellido: apellido, Mesa_id: mesaId })
+        .eq("id", editandoId);
 
-    if (error) {
-      console.error("Error al agregar invitado:", error.message);
-      setMensaje("Ocurrió un error al agregar el invitado.");
+      if (!error) {
+        setMensaje("Invitado actualizado ✅");
+        limpiarFormulario();
+        actualizarLista();
+      }
     } else {
-      setMensaje("Invitado agregado con éxito 🎉");
-      setNombre("");
-      setApellido("");
-      setMesaId("");
+      const { error } = await supabase
+        .from("Invitados")
+        .insert({ Nombre: nombre, Apellido: apellido, Mesa_id: mesaId });
+
+      if (!error) {
+        setMensaje("Invitado agregado con éxito 🎉");
+        limpiarFormulario();
+        actualizarLista();
+      }
+    }
+  };
+
+  const actualizarLista = async () => {
+    const { data } = await supabase
+      .from("Invitados")
+      .select("id, Nombre, Apellido, Mesa_id, Mesas (Nombre)");
+    setInvitados(data || []);
+  };
+
+  const handleEditar = (invitado) => {
+    setNombre(invitado.Nombre);
+    setApellido(invitado.Apellido);
+    setMesaId(invitado.Mesa_id);
+    setEditandoId(invitado.id);
+  };
+
+  const handleEliminar = async (id) => {
+    if (confirm("¿Estás seguro que querés eliminar este invitado?")) {
+      await supabase.from("Invitados").delete().eq("id", id);
+      actualizarLista();
     }
   };
 
   return (
-    <div className="p-6 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Agregar Invitado</h1>
+    <div className="p-6 max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">Agregar o Editar Invitado</h1>
 
       {mensaje && (
         <p className="mb-4 text-center text-sm text-purple-600">{mensaje}</p>
@@ -90,9 +125,37 @@ export default function AgregarInvitadoPage() {
           type="submit"
           className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700"
         >
-          Agregar Invitado
+          {editandoId ? "Actualizar Invitado" : "Agregar Invitado"}
         </button>
       </form>
+
+      <hr className="my-6" />
+
+      <h2 className="text-xl font-semibold mb-2">Lista de Invitados</h2>
+      <ul className="space-y-2">
+        {invitados.map((inv) => (
+          <li key={inv.id} className="flex justify-between items-center border p-2 rounded">
+            <div>
+              {inv.Nombre} {inv.Apellido} - {inv.Mesas?.Nombre || "Sin asignar"}
+            </div>
+            <div className="space-x-2">
+              <button
+                onClick={() => handleEditar(inv)}
+                className="text-blue-600 hover:underline"
+              >
+                Editar
+              </button>
+              <button
+                onClick={() => handleEliminar(inv.id)}
+                className="text-red-600 hover:underline"
+              >
+                Eliminar
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
+export default AgregarInvitadoPage;

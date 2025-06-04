@@ -25,7 +25,9 @@ export default function AdminDashboard() {
           className="bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700">
             🎟️ Ver invitados
           </button>
-          <button className="bg-pink-600 text-white py-2 px-4 rounded hover:bg-pink-700">
+          <button 
+          onClick={() => navigate('/admin/invitadosPage')}
+          className="bg-pink-600 text-white py-2 px-4 rounded hover:bg-pink-700">
             🪑 Organizar mesas
           </button>
           <button className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">

@@ -1,7 +1,7 @@
 // admin/pages/InvitadosPage.jsx
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabase';
-import InvitadosList from '../components/invitadosList';
+import InvitadosList from './invitadosList';
 
 export default function InvitadosPage() {
   const [invitados, setInvitados] = useState([]);
